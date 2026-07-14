@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Safety Stock Monitoring</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --ink: #1f2933;
+      --muted: #667085;
+      --line: #d7dde5;
+      --green: #16794c;
+      --green-bg: #e7f6ee;
+      --amber: #a05a00;
+      --amber-bg: #fff3d6;
+      --red: #b42318;
+      --red-bg: #ffe8e5;
+      --blue: #2357c5;
+      --blue-bg: #eaf0ff;
+      --shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 15px;
+    }
+
+    header {
+      background: #ffffff;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .wrap {
+      width: min(1420px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .topbar {
+      min-height: 96px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    main {
+      padding: 24px 0 40px;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(240px, 1.3fr) repeat(3, minmax(150px, 0.55fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    input, select {
+      width: 100%;
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      padding: 0 12px;
+      font: inherit;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .metric, .detail, .table-panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .metric {
+      padding: 16px;
+      min-height: 94px;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin-bottom: 9px;
+    }
+
+    .metric-value {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.75fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .table-panel {
+      overflow: hidden;
+    }
+
+    .table-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .table-head strong {
+      font-size: 16px;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: 68vh;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+    }
+
+    th, td {
+      padding: 11px 12px;
+      border-bottom: 1px solid #ebeff4;
+      text-align: left;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #f9fafb;
+      color: #344054;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    tbody tr {
+      cursor: pointer;
+    }
+
+    tbody tr:hover, tbody tr.active {
+      background: #f2f6ff;
+    }
+
+    .item-cell {
+      white-space: normal;
+      min-width: 260px;
+      max-width: 380px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 26px;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .status-healthy { color: var(--green); background: var(--green-bg); }
+    .status-watch { color: var(--amber); background: var(--amber-bg); }
+    .status-below-threshold { color: var(--red); background: var(--red-bg); }
+    .status-no-inventory { color: var(--blue); background: var(--blue-bg); }
+
+    .detail {
+      padding: 18px;
+      position: sticky;
+      top: 16px;
+    }
+
+    .detail-photo {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: contain;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8fafc;
+      margin-bottom: 14px;
+    }
+
+    .detail h2 {
+      margin: 0 0 8px;
+      font-size: 21px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    .detail .muted {
+      color: var(--muted);
+      margin-bottom: 14px;
+      line-height: 1.45;
+    }
+
+    .stock-bars {
+      display: grid;
+      gap: 12px;
+      margin: 18px 0;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 118px minmax(0, 1fr) 70px;
+      gap: 10px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .bar-track {
+      height: 13px;
+      background: #edf1f5;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      width: 0;
+      background: var(--blue);
+      border-radius: 999px;
+    }
+
+    .bar-fill.threshold { background: var(--amber); }
+    .bar-fill.current.bad { background: var(--red); }
+    .bar-fill.current.watch { background: var(--amber); }
+    .bar-fill.current.good { background: var(--green); }
+
+    .facts {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .fact {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fbfcfe;
+      min-height: 72px;
+    }
+
+    .fact span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 7px;
+    }
+
+    .fact strong {
+      display: block;
+      font-size: 18px;
+      line-height: 1.2;
+    }
+
+    .empty {
+      padding: 28px 16px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    @media (max-width: 980px) {
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 18px 0;
+      }
+
+      .toolbar, .metrics, .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .detail {
+        position: static;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap topbar">
+      <div>
+        <h1>Safety Stock Monitoring</h1>
+        <p class="subtitle">Product-site thresholds use the previously identified Lowest Remaining Stock level as the safety stock trigger.</p>
+      </div>
+      <button id="downloadBtn" type="button">Download filtered CSV</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="toolbar" aria-label="Filters">
+      <input id="searchInput" type="search" placeholder="Search product ID or item description">
+      <select id="siteFilter">
+        <option value="All">All sites</option>
+      </select>
+      <select id="statusFilter">
+        <option value="All">All statuses</option>
+      </select>
+      <select id="sortSelect">
+        <option value="risk">Sort by risk</option>
+        <option value="gap">Sort by threshold gap</option>
+        <option value="product">Sort by product</option>
+        <option value="site">Sort by site</option>
+      </select>
+    </section>
+
+    <section class="metrics" aria-label="Summary">
+      <div class="metric"><div class="metric-label">Monitored SKUs</div><div id="totalMetric" class="metric-value">0</div></div>
+      <div class="metric"><div class="metric-label">Below Threshold</div><div id="belowMetric" class="metric-value">0</div></div>
+      <div class="metric"><div class="metric-label">Watch</div><div id="watchMetric" class="metric-value">0</div></div>
+      <div class="metric"><div class="metric-label">Healthy</div><div id="healthyMetric" class="metric-value">0</div></div>
+      <div class="metric"><div class="metric-label">Median Buffer</div><div id="bufferMetric" class="metric-value">0</div></div>
+    </section>
+
+    <section class="grid">
+      <div class="table-panel">
+        <div class="table-head">
+          <strong>Product-site threshold register</strong>
+          <span id="resultCount" class="subtitle">0 rows</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Product</th>
+                <th>Item</th>
+                <th>Site</th>
+                <th>Current</th>
+                <th>Threshold</th>
+                <th>Gap</th>
+                <th>PAR</th>
+                <th>Replenish Days</th>
+                <th>Top Ups</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+          <div id="emptyState" class="empty" hidden>No matching product-site thresholds.</div>
+        </div>
+      </div>
+
+      <aside id="detailPanel" class="detail" aria-live="polite"></aside>
+    </section>
+  </main>
+
+  <script>
+    const DATA = [{"productId": "3421316041MOS", "itemDescription": "Bouffant Cap", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 3.0, "currentHolding": 2.0, "safetyStockLevel": 2.0, "lowestRemainingStock": 2.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 66.67, "numberOfTopUps": 6.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421316041MOS.jpg"}, {"productId": "3421316092MOS", "itemDescription": "Disposable Foot Cover", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 9.0, "safetyStockLevel": 9.0, "lowestRemainingStock": 9.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 90.0, "numberOfTopUps": 28.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421316092MOS.jpg"}, {"productId": "3421316121MOS", "itemDescription": "Disposable Gown (Isolation Gown)", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 4.0, "safetyStockLevel": 4.0, "lowestRemainingStock": 4.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 7.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421316121MOS.jpg"}, {"productId": "3421321023MOS", "itemDescription": "Marine Sting Cover", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 6.0, "safetyStockLevel": 6.0, "lowestRemainingStock": 6.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 6.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421321023MOS.jpg"}, {"productId": "3421417051MOS", "itemDescription": "Inflatable pillow", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 4.0, "safetyStockLevel": 4.0, "lowestRemainingStock": 4.0, "optimalReplenishmentDays": -1.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 71.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421417051MOS.jpg"}, {"productId": "3421423031MOS", "itemDescription": "Patient Safety Tag - Yellow (No Sharps or Blood Pressure)", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 5.0, "safetyStockLevel": 5.0, "lowestRemainingStock": 5.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 12.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421423031MOS.jpg"}, {"productId": "3421715021", "itemDescription": "METTAG Triage Tag", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 7.0, "safetyStockLevel": 7.0, "lowestRemainingStock": 7.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 70.0, "numberOfTopUps": 36.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421715021.jpg"}, {"productId": "3421718017", "itemDescription": "Pre-packed LMA Size 2", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 6.0, "currentHolding": 5.0, "safetyStockLevel": 5.0, "lowestRemainingStock": 5.0, "optimalReplenishmentDays": 3.0, "optimalReplenishmentPercentage": 83.33, "numberOfTopUps": 11.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421718017.jpg"}, {"productId": "3421718018", "itemDescription": "Pre-packed LMA Size 2.5", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 5.0, "safetyStockLevel": 5.0, "lowestRemainingStock": 5.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 35.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421718018.jpg"}, {"productId": "3421720062B", "itemDescription": "Pre-packed Delivery Set", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 4.0, "currentHolding": 3.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 1.0, "optimalReplenishmentPercentage": 75.0, "numberOfTopUps": 89.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421720062B.jpg"}, {"productId": "3421827021", "itemDescription": "Broselow Tape", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 3.0, "currentHolding": 0.0, "safetyStockLevel": 0.0, "lowestRemainingStock": 0.0, "optimalReplenishmentDays": -1.0, "optimalReplenishmentPercentage": 0.0, "numberOfTopUps": 7.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421827021.jpg"}, {"productId": "3422723032", "itemDescription": "Child BVM", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 3.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 45.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422723032.jpg"}, {"productId": "3422723032", "itemDescription": "Child BVM", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 5.0, "safetyStockLevel": 5.0, "lowestRemainingStock": 5.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 13.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422723032.jpg"}, {"productId": "3422723033", "itemDescription": "Neonate BVM", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 7.0, "safetyStockLevel": 7.0, "lowestRemainingStock": 7.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 70.0, "numberOfTopUps": 4.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422723033.jpg"}, {"productId": "3423115115A", "itemDescription": "FAD Size 14", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 3.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 53.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115115A.jpg"}, {"productId": "3423115116", "itemDescription": "FAD Size 15", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 3.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 61.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115116.jpg"}, {"productId": "3461891404MOS", "itemDescription": "N95 Mask (8210)", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 3.0, "currentHolding": 2.0, "safetyStockLevel": 2.0, "lowestRemainingStock": 2.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 66.67, "numberOfTopUps": 53.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3461891404MOS.jpg"}, {"productId": "3461891405MOS", "itemDescription": "N95 Mask (8110)", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 3.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 35.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3461891405MOS.jpg"}, {"productId": "3471290101MOS", "itemDescription": "Biohazard Bag", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 3.0, "currentHolding": 2.0, "safetyStockLevel": 2.0, "lowestRemainingStock": 2.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 66.67, "numberOfTopUps": 46.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3471290101MOS.jpg"}, {"productId": "YNZB-3421322035", "itemDescription": "Nitrile Glove, Non Sterile Size M 12 inch", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 3.0, "currentHolding": 2.0, "safetyStockLevel": 2.0, "lowestRemainingStock": 2.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 66.67, "numberOfTopUps": 16.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3421322035.jpg"}, {"productId": "YNZB-3461891412MOS", "itemDescription": "N95 Mask 1870+", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 3.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 57.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3461891412MOS.jpg"}, {"productId": "YNZB-3461891412MOS", "itemDescription": "N95 Mask 1870+", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 4.0, "safetyStockLevel": 4.0, "lowestRemainingStock": 4.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 40.0, "numberOfTopUps": 7.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3461891412MOS.jpg"}, {"productId": "YNZB-3511090102MOSA", "itemDescription": "Antiseptic Alcohol Hand Rub (500ml)", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 5.0, "safetyStockLevel": 5.0, "lowestRemainingStock": 5.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 12.0, "thresholdGap": 0.0, "status": "Below threshold", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3511090102MOSA.jpg"}, {"productId": "3421423031MOS", "itemDescription": "Patient Safety Tag - Yellow (No Sharps or Blood Pressure)", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 9.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 12.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421423031MOS.jpg"}, {"productId": "3421425234", "itemDescription": "Plastic Syringe 10ml", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 14.0, "safetyStockLevel": 13.0, "lowestRemainingStock": 13.0, "optimalReplenishmentDays": 17.0, "optimalReplenishmentPercentage": 65.0, "numberOfTopUps": 5.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421425234.jpg"}, {"productId": "3421718012Z", "itemDescription": "OPA Size 50mm(Blue)", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 7.0, "safetyStockLevel": 6.0, "lowestRemainingStock": 6.0, "optimalReplenishmentDays": 6.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 79.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421718012Z.jpg"}, {"productId": "3421718013Z", "itemDescription": "OPA Size 70mm(White)", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 7.0, "safetyStockLevel": 6.0, "lowestRemainingStock": 6.0, "optimalReplenishmentDays": 17.0, "optimalReplenishmentPercentage": 30.0, "numberOfTopUps": 18.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421718013Z.jpg"}, {"productId": "3421718017", "itemDescription": "Pre-packed LMA Size 2", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 9.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 6.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421718017.jpg"}, {"productId": "3421718019", "itemDescription": "Pre-packed LMA Size 3", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 6.0, "safetyStockLevel": 5.0, "lowestRemainingStock": 5.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 10.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421718019.jpg"}, {"productId": "3421718021", "itemDescription": "Pre-packed LMA Size 5", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 6.0, "safetyStockLevel": 5.0, "lowestRemainingStock": 5.0, "optimalReplenishmentDays": 6.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 14.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421718021.jpg"}, {"productId": "3421718034MOS", "itemDescription": "DISPOSABLE FILTER FOR PSU (AMBUJET)", "site": "Punggol", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 5.0, "safetyStockLevel": 4.0, "lowestRemainingStock": 4.0, "optimalReplenishmentDays": 5.0, "optimalReplenishmentPercentage": 40.0, "numberOfTopUps": 15.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421718034MOS.jpg"}, {"productId": "3422215121MOS", "itemDescription": "IV Cannula 16G", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 10.0, "safetyStockLevel": 9.0, "lowestRemainingStock": 9.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 90.0, "numberOfTopUps": 11.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422215121MOS.jpg"}, {"productId": "3422718023", "itemDescription": "Aerosol Spacer c/w mask", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 14.0, "safetyStockLevel": 13.0, "lowestRemainingStock": 13.0, "optimalReplenishmentDays": 15.0, "optimalReplenishmentPercentage": 65.0, "numberOfTopUps": 5.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422718023.jpg"}, {"productId": "3422720113MOS", "itemDescription": "Yankauer Suction Catheter Adult", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 4.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 1.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 82.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422720113MOS.jpg"}, {"productId": "3423115042", "itemDescription": "Burn Kit Set - Hand Dressing", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 5.0, "safetyStockLevel": 4.0, "lowestRemainingStock": 4.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 35.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115042.jpg"}, {"productId": "3423115114A", "itemDescription": "FAD Size 13", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 2.0, "safetyStockLevel": 1.0, "lowestRemainingStock": 1.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 20.0, "numberOfTopUps": 39.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115114A.jpg"}, {"productId": "3423115114A", "itemDescription": "FAD Size 13", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 10.0, "safetyStockLevel": 9.0, "lowestRemainingStock": 9.0, "optimalReplenishmentDays": -1.0, "optimalReplenishmentPercentage": 90.0, "numberOfTopUps": 55.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115114A.jpg"}, {"productId": "3423117032Z", "itemDescription": "Surgical Tape Size 1/2\"", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 16.0, "safetyStockLevel": 15.0, "lowestRemainingStock": 15.0, "optimalReplenishmentDays": 11.0, "optimalReplenishmentPercentage": 75.0, "numberOfTopUps": 40.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423117032Z.jpg"}, {"productId": "3461891404MOS", "itemDescription": "N95 Mask (8210)", "site": "Sengkang", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 4.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 1.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 51.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3461891404MOS.jpg"}, {"productId": "3511627321MOS", "itemDescription": "Oxymetazoline HCL Nasal Spray 0.05%", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 9.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 4.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 22.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3511627321MOS.jpg"}, {"productId": "3511822041", "itemDescription": "IM Syntometrine 1mg", "site": "Sengkang", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 6.0, "safetyStockLevel": 5.0, "lowestRemainingStock": 5.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 25.0, "numberOfTopUps": 43.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3511822041.jpg"}, {"productId": "3511916071MOS", "itemDescription": "IV Dextrose 10%, 500mls", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 6.0, "safetyStockLevel": 5.0, "lowestRemainingStock": 5.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 13.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3511916071MOS.jpg"}, {"productId": "3513817011ZMOS", "itemDescription": "Paracetamol Tablet, 500mg", "site": "Punggol", "bestMethod": "ARIMA", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 7.0, "safetyStockLevel": 6.0, "lowestRemainingStock": 6.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 68.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3513817011ZMOS.jpg"}, {"productId": "3514728021Z", "itemDescription": "Chlorhexidine Gluconate Sachet 0.05% (25mls)", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 7.0, "safetyStockLevel": 6.0, "lowestRemainingStock": 6.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 86.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3514728021Z.jpg"}, {"productId": "3531024028", "itemDescription": "Sanitary Pad (For Maternity)", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 10.0, "safetyStockLevel": 9.0, "lowestRemainingStock": 9.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 90.0, "numberOfTopUps": 4.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3531024028.jpg"}, {"productId": "3531391201", "itemDescription": "Disposable Shaver", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 9.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 11.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3531391201.jpg"}, {"productId": "3531391201", "itemDescription": "Disposable Shaver", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 14.0, "safetyStockLevel": 13.0, "lowestRemainingStock": 13.0, "optimalReplenishmentDays": 17.0, "optimalReplenishmentPercentage": 65.0, "numberOfTopUps": 3.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3531391201.jpg"}, {"productId": "YNZB-3421717041MOS", "itemDescription": "Newborn Thermal Wrap", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 4.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 1.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 80.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3421717041MOS.jpg"}, {"productId": "YNZB-3531390145", "itemDescription": "Disinfectant Spray", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 9.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 6.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 14.0, "thresholdGap": 1.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3531390145.jpg"}, {"productId": "3421416031MOS", "itemDescription": "Disposable Kidney Dish", "site": "Sengkang", "bestMethod": "Linear Regression", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 14.0, "safetyStockLevel": 12.0, "lowestRemainingStock": 12.0, "optimalReplenishmentDays": 12.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 6.0, "thresholdGap": 2.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421416031MOS.jpg"}, {"productId": "3421718014", "itemDescription": "OPA Size 80mm (Green)", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 15.0, "safetyStockLevel": 13.0, "lowestRemainingStock": 13.0, "optimalReplenishmentDays": 14.0, "optimalReplenishmentPercentage": 65.0, "numberOfTopUps": 5.0, "thresholdGap": 2.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421718014.jpg"}, {"productId": "3421722011", "itemDescription": "Arterial Tourniquet", "site": "Sengkang", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 14.0, "safetyStockLevel": 12.0, "lowestRemainingStock": 12.0, "optimalReplenishmentDays": 13.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 6.0, "thresholdGap": 2.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421722011.jpg"}, {"productId": "3422215122A", "itemDescription": "IV Cannula 18G", "site": "Sengkang", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 18.0, "safetyStockLevel": 16.0, "lowestRemainingStock": 16.0, "optimalReplenishmentDays": 17.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 5.0, "thresholdGap": 2.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422215122A.jpg"}, {"productId": "3422717084", "itemDescription": "Child Non-Rebreather Mask", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 7.0, "safetyStockLevel": 5.0, "lowestRemainingStock": 5.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 13.0, "thresholdGap": 2.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422717084.jpg"}, {"productId": "3461891303MOS", "itemDescription": "Goggles (UVEX Brand)", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 17.0, "safetyStockLevel": 15.0, "lowestRemainingStock": 15.0, "optimalReplenishmentDays": 4.0, "optimalReplenishmentPercentage": 75.0, "numberOfTopUps": 11.0, "thresholdGap": 2.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3461891303MOS.jpg"}, {"productId": "3511916025MOS", "itemDescription": "IV Normal Saline 0.9%, 100mls", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 5.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 6.0, "optimalReplenishmentPercentage": 30.0, "numberOfTopUps": 15.0, "thresholdGap": 2.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3511916025MOS.jpg"}, {"productId": "3513817011ZMOS", "itemDescription": "Paracetamol Tablet, 500mg", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 8.0, "safetyStockLevel": 6.0, "lowestRemainingStock": 6.0, "optimalReplenishmentDays": 13.0, "optimalReplenishmentPercentage": 30.0, "numberOfTopUps": 23.0, "thresholdGap": 2.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3513817011ZMOS.jpg"}, {"productId": "3513917031", "itemDescription": "Salbutamol MDI", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 13.0, "safetyStockLevel": 11.0, "lowestRemainingStock": 11.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 55.0, "numberOfTopUps": 12.0, "thresholdGap": 2.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3513917031.jpg"}, {"productId": "YNZB-3421425231", "itemDescription": "Sterile Needle Size 21G", "site": "Sengkang", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 10.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 13.0, "thresholdGap": 2.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3421425231.jpg"}, {"productId": "YNZB-3422215125", "itemDescription": "IV Cannula 24G", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 10.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 12.0, "thresholdGap": 2.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3422215125.jpg"}, {"productId": "YNZB-3514116051", "itemDescription": "GTN SL Spray 0.4mg", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 10.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 11.0, "thresholdGap": 2.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3514116051.jpg"}, {"productId": "YNZB-3531390145", "itemDescription": "Disinfectant Spray", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 8.0, "safetyStockLevel": 6.0, "lowestRemainingStock": 6.0, "optimalReplenishmentDays": 6.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 15.0, "thresholdGap": 2.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3531390145.jpg"}, {"productId": "3421425233", "itemDescription": "Plastic Syringe 3ml", "site": "Punggol", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 14.0, "safetyStockLevel": 11.0, "lowestRemainingStock": 11.0, "optimalReplenishmentDays": 17.0, "optimalReplenishmentPercentage": 55.0, "numberOfTopUps": 5.0, "thresholdGap": 3.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421425233.jpg"}, {"productId": "3421425311ZMOS", "itemDescription": "Plain tube for Tramadol Disposal", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 14.0, "safetyStockLevel": 11.0, "lowestRemainingStock": 11.0, "optimalReplenishmentDays": 16.0, "optimalReplenishmentPercentage": 55.0, "numberOfTopUps": 5.0, "thresholdGap": 3.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421425311ZMOS.jpg"}, {"productId": "3421716101", "itemDescription": "Pelvic Binder", "site": "Sengkang", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 8.0, "safetyStockLevel": 5.0, "lowestRemainingStock": 5.0, "optimalReplenishmentDays": 16.0, "optimalReplenishmentPercentage": 25.0, "numberOfTopUps": 5.0, "thresholdGap": 3.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421716101.jpg"}, {"productId": "3421718014", "itemDescription": "OPA Size 80mm (Green)", "site": "Punggol", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 18.0, "safetyStockLevel": 15.0, "lowestRemainingStock": 15.0, "optimalReplenishmentDays": 13.0, "optimalReplenishmentPercentage": 75.0, "numberOfTopUps": 6.0, "thresholdGap": 3.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421718014.jpg"}, {"productId": "3422215123B", "itemDescription": "IV Cannula 20G", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 13.0, "safetyStockLevel": 10.0, "lowestRemainingStock": 10.0, "optimalReplenishmentDays": 17.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 5.0, "thresholdGap": 3.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422215123B.jpg"}, {"productId": "3422717083A", "itemDescription": "Child Face Mask", "site": "Punggol", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 13.0, "safetyStockLevel": 10.0, "lowestRemainingStock": 10.0, "optimalReplenishmentDays": 13.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 6.0, "thresholdGap": 3.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422717083A.jpg"}, {"productId": "3423115111B", "itemDescription": "Melolin", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 7.0, "safetyStockLevel": 4.0, "lowestRemainingStock": 4.0, "optimalReplenishmentDays": 16.0, "optimalReplenishmentPercentage": 20.0, "numberOfTopUps": 5.0, "thresholdGap": 3.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115111B.jpg"}, {"productId": "3421425232Z", "itemDescription": "Sterile Needle Size 23G", "site": "Sengkang", "bestMethod": "ARIMA", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 10.0, "safetyStockLevel": 6.0, "lowestRemainingStock": 6.0, "optimalReplenishmentDays": 13.0, "optimalReplenishmentPercentage": 30.0, "numberOfTopUps": 6.0, "thresholdGap": 4.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421425232Z.jpg"}, {"productId": "3421425238MOS", "itemDescription": "Plastic Syringe 1ml", "site": "Sengkang", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 14.0, "safetyStockLevel": 10.0, "lowestRemainingStock": 10.0, "optimalReplenishmentDays": 17.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 5.0, "thresholdGap": 4.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421425238MOS.jpg"}, {"productId": "3421490101MOS", "itemDescription": "Alcohol Swab", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 18.0, "safetyStockLevel": 14.0, "lowestRemainingStock": 14.0, "optimalReplenishmentDays": 15.0, "optimalReplenishmentPercentage": 70.0, "numberOfTopUps": 6.0, "thresholdGap": 4.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421490101MOS.jpg"}, {"productId": "3422717083A", "itemDescription": "Child Face Mask", "site": "Sengkang", "bestMethod": "Linear Regression", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 14.0, "safetyStockLevel": 10.0, "lowestRemainingStock": 10.0, "optimalReplenishmentDays": 15.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 5.0, "thresholdGap": 4.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422717083A.jpg"}, {"productId": "3422718022", "itemDescription": "Child Nebuliser Mask", "site": "Sengkang", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 16.0, "safetyStockLevel": 12.0, "lowestRemainingStock": 12.0, "optimalReplenishmentDays": 14.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 6.0, "thresholdGap": 4.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422718022.jpg"}, {"productId": "3511627321MOS", "itemDescription": "Oxymetazoline HCL Nasal Spray 0.05%", "site": "Sengkang", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 17.0, "safetyStockLevel": 13.0, "lowestRemainingStock": 13.0, "optimalReplenishmentDays": 12.0, "optimalReplenishmentPercentage": 65.0, "numberOfTopUps": 7.0, "thresholdGap": 4.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3511627321MOS.jpg"}, {"productId": "3514015182MOS", "itemDescription": "Rectal Diazepam 5mg/2.5mls tube", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 30.0, "currentHolding": 17.0, "safetyStockLevel": 13.0, "lowestRemainingStock": 13.0, "optimalReplenishmentDays": 10.0, "optimalReplenishmentPercentage": 43.33, "numberOfTopUps": 47.0, "thresholdGap": 4.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3514015182MOS.jpg"}, {"productId": "YNZB-3241191107MOS", "itemDescription": "Polythene Bag (305mm X 457mm)", "site": "Sengkang", "bestMethod": "ARIMA", "optimalPercentile": 100.0, "par": 30.0, "currentHolding": 18.0, "safetyStockLevel": 14.0, "lowestRemainingStock": 14.0, "optimalReplenishmentDays": 13.0, "optimalReplenishmentPercentage": 46.67, "numberOfTopUps": 6.0, "thresholdGap": 4.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3241191107MOS.jpg"}, {"productId": "YNZB-3421718015", "itemDescription": "OPA Size 90mm (Yellow)", "site": "Punggol", "bestMethod": "ARIMA", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 12.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 15.0, "optimalReplenishmentPercentage": 40.0, "numberOfTopUps": 6.0, "thresholdGap": 4.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3421718015.jpg"}, {"productId": "YNZB-3422719081", "itemDescription": "Adult LMA Tube Holder", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 14.0, "safetyStockLevel": 10.0, "lowestRemainingStock": 10.0, "optimalReplenishmentDays": 15.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 5.0, "thresholdGap": 4.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3422719081.jpg"}, {"productId": "3422717084", "itemDescription": "Child Non-Rebreather Mask", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 40.0, "currentHolding": 9.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 21.0, "optimalReplenishmentPercentage": 7.5, "numberOfTopUps": 4.0, "thresholdGap": 6.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422717084.jpg"}, {"productId": "3423115113Z", "itemDescription": "Large Sterile pad", "site": "Punggol", "bestMethod": "ARIMA", "optimalPercentile": 100.0, "par": 40.0, "currentHolding": 23.0, "safetyStockLevel": 16.0, "lowestRemainingStock": 16.0, "optimalReplenishmentDays": 20.0, "optimalReplenishmentPercentage": 40.0, "numberOfTopUps": 4.0, "thresholdGap": 7.0, "status": "Watch", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115113Z.jpg"}, {"productId": "3421316041MOS", "itemDescription": "Bouffant Cap", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 3.0, "currentHolding": 3.0, "safetyStockLevel": 2.0, "lowestRemainingStock": 2.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 66.67, "numberOfTopUps": 11.0, "thresholdGap": 1.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421316041MOS.jpg"}, {"productId": "3421316053MOSP", "itemDescription": "Ebola PPE Coverall Size L", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 3.0, "currentHolding": 3.0, "safetyStockLevel": 2.0, "lowestRemainingStock": 2.0, "optimalReplenishmentDays": -1.0, "optimalReplenishmentPercentage": 66.67, "numberOfTopUps": 42.0, "thresholdGap": 1.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421316053MOSP.jpg"}, {"productId": "3421316121MOS", "itemDescription": "Disposable Gown (Isolation Gown)", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 3.0, "currentHolding": 3.0, "safetyStockLevel": 2.0, "lowestRemainingStock": 2.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 66.67, "numberOfTopUps": 48.0, "thresholdGap": 1.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421316121MOS.jpg"}, {"productId": "3423115042", "itemDescription": "Burn Kit Set - Hand Dressing", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 4.0, "currentHolding": 3.0, "safetyStockLevel": 2.0, "lowestRemainingStock": 2.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 47.0, "thresholdGap": 1.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115042.jpg"}, {"productId": "YNZB-3421322034", "itemDescription": "Nitrile Glove, Non Sterile Size S 12 inch", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 3.0, "currentHolding": 3.0, "safetyStockLevel": 2.0, "lowestRemainingStock": 2.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 66.67, "numberOfTopUps": 6.0, "thresholdGap": 1.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3421322034.jpg"}, {"productId": "3421316092MOS", "itemDescription": "Disposable Foot Cover", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 5.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 6.0, "thresholdGap": 2.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421316092MOS.jpg"}, {"productId": "3421715021", "itemDescription": "METTAG Triage Tag", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 3.0, "safetyStockLevel": 1.0, "lowestRemainingStock": 1.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 20.0, "numberOfTopUps": 90.0, "thresholdGap": 2.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421715021.jpg"}, {"productId": "3421716101", "itemDescription": "Pelvic Binder", "site": "Punggol", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 4.0, "safetyStockLevel": 2.0, "lowestRemainingStock": 2.0, "optimalReplenishmentDays": 1.0, "optimalReplenishmentPercentage": 40.0, "numberOfTopUps": 71.0, "thresholdGap": 2.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421716101.jpg"}, {"productId": "3421718012Z", "itemDescription": "OPA Size 50mm(Blue)", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 6.0, "currentHolding": 7.0, "safetyStockLevel": 5.0, "lowestRemainingStock": 5.0, "optimalReplenishmentDays": 3.0, "optimalReplenishmentPercentage": 83.33, "numberOfTopUps": 27.0, "thresholdGap": 2.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421718012Z.jpg"}, {"productId": "3421720062B", "itemDescription": "Pre-packed Delivery Set", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 3.0, "currentHolding": 4.0, "safetyStockLevel": 2.0, "lowestRemainingStock": 2.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 66.67, "numberOfTopUps": 59.0, "thresholdGap": 2.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421720062B.jpg"}, {"productId": "3422723033", "itemDescription": "Neonate BVM", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 6.0, "safetyStockLevel": 4.0, "lowestRemainingStock": 4.0, "optimalReplenishmentDays": 1.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 71.0, "thresholdGap": 2.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422723033.jpg"}, {"productId": "3422723039", "itemDescription": "Paediatric Pocket Mask (For FB)", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 3.0, "currentHolding": 4.0, "safetyStockLevel": 2.0, "lowestRemainingStock": 2.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 66.67, "numberOfTopUps": 5.0, "thresholdGap": 2.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422723039.jpg"}, {"productId": "3423115043", "itemDescription": "Burn Kit Set - Dressing Size 20cm x 45cm", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 4.0, "safetyStockLevel": 2.0, "lowestRemainingStock": 2.0, "optimalReplenishmentDays": 1.0, "optimalReplenishmentPercentage": 40.0, "numberOfTopUps": 84.0, "thresholdGap": 2.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115043.jpg"}, {"productId": "3423115044", "itemDescription": "Burn Kit Set - Dressing Size 10cm x 45cm", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 5.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 75.0, "thresholdGap": 2.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115044.jpg"}, {"productId": "3423115044", "itemDescription": "Burn Kit Set - Dressing Size 10cm x 45cm", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 5.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 13.0, "thresholdGap": 2.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115044.jpg"}, {"productId": "3461891405MOS", "itemDescription": "N95 Mask (8110)", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 3.0, "currentHolding": 3.0, "safetyStockLevel": 1.0, "lowestRemainingStock": 1.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 33.33, "numberOfTopUps": 53.0, "thresholdGap": 2.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3461891405MOS.jpg"}, {"productId": "YNZB-3421717041MOS", "itemDescription": "Newborn Thermal Wrap", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 5.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 35.0, "thresholdGap": 2.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3421717041MOS.jpg"}, {"productId": "3421321023MOS", "itemDescription": "Marine Sting Cover", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 10.0, "safetyStockLevel": 7.0, "lowestRemainingStock": 7.0, "optimalReplenishmentDays": 1.0, "optimalReplenishmentPercentage": 70.0, "numberOfTopUps": 20.0, "thresholdGap": 3.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421321023MOS.jpg"}, {"productId": "3421425234", "itemDescription": "Plastic Syringe 10ml", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 10.0, "safetyStockLevel": 7.0, "lowestRemainingStock": 7.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 70.0, "numberOfTopUps": 11.0, "thresholdGap": 3.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421425234.jpg"}, {"productId": "3421722011", "itemDescription": "Arterial Tourniquet", "site": "Punggol", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 6.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 1.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 76.0, "thresholdGap": 3.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421722011.jpg"}, {"productId": "3423115131", "itemDescription": "Burn Kit Set - Gel 4g", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 7.0, "safetyStockLevel": 4.0, "lowestRemainingStock": 4.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 25.0, "thresholdGap": 3.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115131.jpg"}, {"productId": "3423115221", "itemDescription": "Chest Seal", "site": "Sengkang", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 8.0, "safetyStockLevel": 5.0, "lowestRemainingStock": 5.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 39.0, "thresholdGap": 3.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115221.jpg"}, {"productId": "3513917031", "itemDescription": "Salbutamol MDI", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 7.0, "safetyStockLevel": 4.0, "lowestRemainingStock": 4.0, "optimalReplenishmentDays": 1.0, "optimalReplenishmentPercentage": 40.0, "numberOfTopUps": 89.0, "thresholdGap": 3.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3513917031.jpg"}, {"productId": "YNZB-3421416032", "itemDescription": "Vomitus Bag", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 11.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 12.0, "thresholdGap": 3.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3421416032.jpg"}, {"productId": "YNZB-3422723039", "itemDescription": "Paediatric Pocket Mask (For FB)", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 2.0, "currentHolding": 4.0, "safetyStockLevel": 1.0, "lowestRemainingStock": 1.0, "optimalReplenishmentDays": -1.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 14.0, "thresholdGap": 3.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3422723039.jpg"}, {"productId": "3421716082", "itemDescription": "Paediatric Head Immobiliser", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 7.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 1.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 75.0, "thresholdGap": 4.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421716082.jpg"}, {"productId": "3422718023", "itemDescription": "Aerosol Spacer c/w mask", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 8.0, "safetyStockLevel": 4.0, "lowestRemainingStock": 4.0, "optimalReplenishmentDays": -1.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 75.0, "thresholdGap": 4.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422718023.jpg"}, {"productId": "3422719082MOS", "itemDescription": "Child LMA Tube Holder", "site": "Sengkang", "bestMethod": "Linear Regression", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 6.0, "safetyStockLevel": 2.0, "lowestRemainingStock": 2.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 20.0, "numberOfTopUps": 22.0, "thresholdGap": 4.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422719082MOS.jpg"}, {"productId": "3422720111", "itemDescription": "Suction Catheter Size 10", "site": "Punggol", "bestMethod": "ARIMA", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 10.0, "safetyStockLevel": 6.0, "lowestRemainingStock": 6.0, "optimalReplenishmentDays": 6.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 75.0, "thresholdGap": 4.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422720111.jpg"}, {"productId": "3423115221", "itemDescription": "Chest Seal", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 10.0, "safetyStockLevel": 6.0, "lowestRemainingStock": 6.0, "optimalReplenishmentDays": 4.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 16.0, "thresholdGap": 4.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115221.jpg"}, {"productId": "3421417051MOS", "itemDescription": "Inflatable pillow", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 8.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 68.0, "thresholdGap": 5.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421417051MOS.jpg"}, {"productId": "3421425238MOS", "itemDescription": "Plastic Syringe 1ml", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 12.0, "safetyStockLevel": 7.0, "lowestRemainingStock": 7.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 70.0, "numberOfTopUps": 12.0, "thresholdGap": 5.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421425238MOS.jpg"}, {"productId": "3421490101MOS", "itemDescription": "Alcohol Swab", "site": "Sengkang", "bestMethod": "Linear Regression", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 15.0, "safetyStockLevel": 10.0, "lowestRemainingStock": 10.0, "optimalReplenishmentDays": 15.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 6.0, "thresholdGap": 5.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421490101MOS.jpg"}, {"productId": "3421716082", "itemDescription": "Paediatric Head Immobiliser", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 7.0, "safetyStockLevel": 2.0, "lowestRemainingStock": 2.0, "optimalReplenishmentDays": 1.0, "optimalReplenishmentPercentage": 40.0, "numberOfTopUps": 65.0, "thresholdGap": 5.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421716082.jpg"}, {"productId": "3421718020", "itemDescription": "Pre-packed LMA Size 4", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 14.0, "safetyStockLevel": 9.0, "lowestRemainingStock": 9.0, "optimalReplenishmentDays": 15.0, "optimalReplenishmentPercentage": 45.0, "numberOfTopUps": 6.0, "thresholdGap": 5.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421718020.jpg"}, {"productId": "3421718034MOS", "itemDescription": "DISPOSABLE FILTER FOR PSU (AMBUJET)", "site": "Sengkang", "bestMethod": "Linear Regression", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 13.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 15.0, "optimalReplenishmentPercentage": 40.0, "numberOfTopUps": 5.0, "thresholdGap": 5.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421718034MOS.jpg"}, {"productId": "3421720063", "itemDescription": "Limpet Bag", "site": "Sengkang", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 14.0, "safetyStockLevel": 9.0, "lowestRemainingStock": 9.0, "optimalReplenishmentDays": 13.0, "optimalReplenishmentPercentage": 45.0, "numberOfTopUps": 7.0, "thresholdGap": 5.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421720063.jpg"}, {"productId": "3421721069MOS", "itemDescription": "Child Defib Zoll CPR Stat Padz", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 9.0, "safetyStockLevel": 4.0, "lowestRemainingStock": 4.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 44.0, "thresholdGap": 5.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421721069MOS.jpg"}, {"productId": "3421721071MOS", "itemDescription": "Adult ETCO2 Sensor", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 10.0, "safetyStockLevel": 5.0, "lowestRemainingStock": 5.0, "optimalReplenishmentDays": 15.0, "optimalReplenishmentPercentage": 25.0, "numberOfTopUps": 6.0, "thresholdGap": 5.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421721071MOS.jpg"}, {"productId": "3422415021", "itemDescription": "SAM Splint", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 14.0, "safetyStockLevel": 9.0, "lowestRemainingStock": 9.0, "optimalReplenishmentDays": 14.0, "optimalReplenishmentPercentage": 45.0, "numberOfTopUps": 6.0, "thresholdGap": 5.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422415021.jpg"}, {"productId": "3423115117", "itemDescription": "Haemostatic Bandage", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 12.0, "safetyStockLevel": 7.0, "lowestRemainingStock": 7.0, "optimalReplenishmentDays": 9.0, "optimalReplenishmentPercentage": 35.0, "numberOfTopUps": 8.0, "thresholdGap": 5.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115117.jpg"}, {"productId": "3423117031Y", "itemDescription": "Durapore Tape 1\"", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 14.0, "safetyStockLevel": 9.0, "lowestRemainingStock": 9.0, "optimalReplenishmentDays": 14.0, "optimalReplenishmentPercentage": 45.0, "numberOfTopUps": 6.0, "thresholdGap": 5.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423117031Y.jpg"}, {"productId": "3511431031Z", "itemDescription": "Aspirin 100mg Tab", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 8.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 5.0, "optimalReplenishmentPercentage": 30.0, "numberOfTopUps": 96.0, "thresholdGap": 5.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3511431031Z.jpg"}, {"productId": "3531390145MOS", "itemDescription": "Disinfectant Spray (Dettol)", "site": "Sengkang", "bestMethod": "Linear Regression", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 11.0, "safetyStockLevel": 6.0, "lowestRemainingStock": 6.0, "optimalReplenishmentDays": 6.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 5.0, "thresholdGap": 5.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3531390145MOS.jpg"}, {"productId": "YNZB-3421322052", "itemDescription": "Sterile Latex Gloves Size 7", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 13.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 6.0, "thresholdGap": 5.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3421322052.jpg"}, {"productId": "3421425311ZMOS", "itemDescription": "Plain tube for Tramadol Disposal", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 12.0, "safetyStockLevel": 6.0, "lowestRemainingStock": 6.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 68.0, "thresholdGap": 6.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421425311ZMOS.jpg"}, {"productId": "3421718021", "itemDescription": "Pre-packed LMA Size 5", "site": "Sengkang", "bestMethod": "Linear Regression", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 7.0, "safetyStockLevel": 1.0, "lowestRemainingStock": 1.0, "optimalReplenishmentDays": 15.0, "optimalReplenishmentPercentage": 5.0, "numberOfTopUps": 5.0, "thresholdGap": 6.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421718021.jpg"}, {"productId": "3422215122A", "itemDescription": "IV Cannula 18G", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 14.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 12.0, "thresholdGap": 6.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422215122A.jpg"}, {"productId": "3423115043", "itemDescription": "Burn Kit Set - Dressing Size 20cm x 45cm", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 9.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 1.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 15.0, "thresholdGap": 6.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115043.jpg"}, {"productId": "3423115115A", "itemDescription": "FAD Size 14", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 10.0, "safetyStockLevel": 4.0, "lowestRemainingStock": 4.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 55.0, "thresholdGap": 6.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115115A.jpg"}, {"productId": "3423115117", "itemDescription": "Haemostatic Bandage", "site": "Sengkang", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 16.0, "safetyStockLevel": 10.0, "lowestRemainingStock": 10.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 36.0, "thresholdGap": 6.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115117.jpg"}, {"productId": "3531024028", "itemDescription": "Sanitary Pad (For Maternity)", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 15.0, "safetyStockLevel": 9.0, "lowestRemainingStock": 9.0, "optimalReplenishmentDays": 1.0, "optimalReplenishmentPercentage": 90.0, "numberOfTopUps": 75.0, "thresholdGap": 6.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3531024028.jpg"}, {"productId": "YNZB-3421425233", "itemDescription": "Plastic Syringe 3ml", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 11.0, "safetyStockLevel": 5.0, "lowestRemainingStock": 5.0, "optimalReplenishmentDays": 14.0, "optimalReplenishmentPercentage": 25.0, "numberOfTopUps": 6.0, "thresholdGap": 6.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3421425233.jpg"}, {"productId": "YNZB-3514116051", "itemDescription": "GTN SL Spray 0.4mg", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 10.0, "safetyStockLevel": 4.0, "lowestRemainingStock": 4.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 25.0, "thresholdGap": 6.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3514116051.jpg"}, {"productId": "3411162153", "itemDescription": "Blood Glucometer Control Solution", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 10.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 44.0, "thresholdGap": 7.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3411162153.jpg"}, {"productId": "3421716072", "itemDescription": "Paediatric C-Collar", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 7.0, "currentHolding": 11.0, "safetyStockLevel": 4.0, "lowestRemainingStock": 4.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 57.14, "numberOfTopUps": 34.0, "thresholdGap": 7.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421716072.jpg"}, {"productId": "3421718013Z", "itemDescription": "OPA Size 70mm(White)", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 15.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 8.0, "optimalReplenishmentPercentage": 40.0, "numberOfTopUps": 60.0, "thresholdGap": 7.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421718013Z.jpg"}, {"productId": "3421718019", "itemDescription": "Pre-packed LMA Size 3", "site": "Sengkang", "bestMethod": "ARIMA", "optimalPercentile": 100.0, "par": 30.0, "currentHolding": 17.0, "safetyStockLevel": 10.0, "lowestRemainingStock": 10.0, "optimalReplenishmentDays": 17.0, "optimalReplenishmentPercentage": 33.33, "numberOfTopUps": 5.0, "thresholdGap": 7.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421718019.jpg"}, {"productId": "3421722012A", "itemDescription": "Venous Tourniquet", "site": "Punggol", "bestMethod": "ARIMA", "optimalPercentile": 100.0, "par": 30.0, "currentHolding": 19.0, "safetyStockLevel": 12.0, "lowestRemainingStock": 12.0, "optimalReplenishmentDays": 17.0, "optimalReplenishmentPercentage": 40.0, "numberOfTopUps": 17.0, "thresholdGap": 7.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421722012A.jpg"}, {"productId": "3423117033Z", "itemDescription": "Surgical Tape Size 1\"", "site": "Punggol", "bestMethod": "Linear Regression", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 10.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 12.0, "optimalReplenishmentPercentage": 15.0, "numberOfTopUps": 39.0, "thresholdGap": 7.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423117033Z.jpg"}, {"productId": "3423117081MOSA", "itemDescription": "Self-Adhering Wrap", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 15.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 55.0, "thresholdGap": 7.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423117081MOSA.jpg"}, {"productId": "3513917432", "itemDescription": "IV Pre-Diluted Adrenaline (1:10,000), 10mls", "site": "Punggol", "bestMethod": "Linear Regression", "optimalPercentile": 100.0, "par": 30.0, "currentHolding": 28.0, "safetyStockLevel": 21.0, "lowestRemainingStock": 21.0, "optimalReplenishmentDays": 8.0, "optimalReplenishmentPercentage": 70.0, "numberOfTopUps": 11.0, "thresholdGap": 7.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3513917432.jpg"}, {"productId": "YNZB-3422215125", "itemDescription": "IV Cannula 24G", "site": "Sengkang", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 10.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 16.0, "optimalReplenishmentPercentage": 15.0, "numberOfTopUps": 5.0, "thresholdGap": 7.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3422215125.jpg"}, {"productId": "YNZB-3423115063A", "itemDescription": "Crepe Bandage 10cm", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 19.0, "safetyStockLevel": 12.0, "lowestRemainingStock": 12.0, "optimalReplenishmentDays": 14.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 6.0, "thresholdGap": 7.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3423115063A.jpg"}, {"productId": "YNZB-3511090102MOSA", "itemDescription": "Antiseptic Alcohol Hand Rub (500ml)", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 19.0, "safetyStockLevel": 12.0, "lowestRemainingStock": 12.0, "optimalReplenishmentDays": 17.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 4.0, "thresholdGap": 7.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3511090102MOSA.jpg"}, {"productId": "YNZB-3513917032MOS", "itemDescription": "Ventolin Solution 5mg", "site": "Punggol", "bestMethod": "ARIMA", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 14.0, "safetyStockLevel": 7.0, "lowestRemainingStock": 7.0, "optimalReplenishmentDays": 15.0, "optimalReplenishmentPercentage": 35.0, "numberOfTopUps": 5.0, "thresholdGap": 7.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3513917032MOS.jpg"}, {"productId": "3411162153A", "itemDescription": "Blood Glucometer Control Solution", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 12.0, "safetyStockLevel": 4.0, "lowestRemainingStock": 4.0, "optimalReplenishmentDays": 1.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 74.0, "thresholdGap": 8.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3411162153A.jpg"}, {"productId": "3421721069MOS", "itemDescription": "Child Defib Zoll CPR Stat Padz", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 3.0, "currentHolding": 9.0, "safetyStockLevel": 1.0, "lowestRemainingStock": 1.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 33.33, "numberOfTopUps": 85.0, "thresholdGap": 8.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421721069MOS.jpg"}, {"productId": "3423117031Y", "itemDescription": "Durapore Tape 1\"", "site": "Sengkang", "bestMethod": "ARIMA", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 13.0, "safetyStockLevel": 5.0, "lowestRemainingStock": 5.0, "optimalReplenishmentDays": 5.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 17.0, "thresholdGap": 8.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423117031Y.jpg"}, {"productId": "3461891303MOS", "itemDescription": "Goggles (UVEX Brand)", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 10.0, "safetyStockLevel": 2.0, "lowestRemainingStock": 2.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 40.0, "numberOfTopUps": 26.0, "thresholdGap": 8.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3461891303MOS.jpg"}, {"productId": "YNZB-3421425231", "itemDescription": "Sterile Needle Size 21G", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 12.0, "safetyStockLevel": 4.0, "lowestRemainingStock": 4.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 40.0, "numberOfTopUps": 38.0, "thresholdGap": 8.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3421425231.jpg"}, {"productId": "YNZB-3421716071", "itemDescription": "Adult C-Collar (Adjustable)", "site": "Punggol", "bestMethod": "KNN", "optimalPercentile": 100.0, "par": 30.0, "currentHolding": 21.0, "safetyStockLevel": 13.0, "lowestRemainingStock": 13.0, "optimalReplenishmentDays": 15.0, "optimalReplenishmentPercentage": 43.33, "numberOfTopUps": 5.0, "thresholdGap": 8.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3421716071.jpg"}, {"productId": "3421426021MOS", "itemDescription": "Bulb Syringe", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 17.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 4.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 20.0, "thresholdGap": 9.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421426021MOS.jpg"}, {"productId": "3422215124B", "itemDescription": "IV Cannula 22G", "site": "Punggol", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 30.0, "currentHolding": 22.0, "safetyStockLevel": 13.0, "lowestRemainingStock": 13.0, "optimalReplenishmentDays": 20.0, "optimalReplenishmentPercentage": 43.33, "numberOfTopUps": 4.0, "thresholdGap": 9.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422215124B.jpg"}, {"productId": "3422718022", "itemDescription": "Child Nebuliser Mask", "site": "Punggol", "bestMethod": "Linear Regression", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 15.0, "safetyStockLevel": 6.0, "lowestRemainingStock": 6.0, "optimalReplenishmentDays": 6.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 14.0, "thresholdGap": 9.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422718022.jpg"}, {"productId": "3422719082MOS", "itemDescription": "Child LMA Tube Holder", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 12.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 35.0, "thresholdGap": 9.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422719082MOS.jpg"}, {"productId": "3422720111", "itemDescription": "Suction Catheter Size 10", "site": "Sengkang", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 14.0, "safetyStockLevel": 5.0, "lowestRemainingStock": 5.0, "optimalReplenishmentDays": 5.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 16.0, "thresholdGap": 9.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422720111.jpg"}, {"productId": "3423115051", "itemDescription": "Finger Plaster", "site": "Sengkang", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 30.0, "currentHolding": 17.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 21.0, "optimalReplenishmentPercentage": 26.67, "numberOfTopUps": 1.0, "thresholdGap": 9.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115051.jpg"}, {"productId": "3423115064A", "itemDescription": "Crepe Bandage 15cm", "site": "Sengkang", "bestMethod": "Linear Regression", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 14.0, "safetyStockLevel": 5.0, "lowestRemainingStock": 5.0, "optimalReplenishmentDays": 13.0, "optimalReplenishmentPercentage": 25.0, "numberOfTopUps": 7.0, "thresholdGap": 9.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115064A.jpg"}, {"productId": "YNZB-3141117043MOSA", "itemDescription": "Paper towels", "site": "Punggol", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 12.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 13.0, "optimalReplenishmentPercentage": 15.0, "numberOfTopUps": 7.0, "thresholdGap": 9.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3141117043MOSA.jpg"}, {"productId": "3421718020", "itemDescription": "Pre-packed LMA Size 4", "site": "Sengkang", "bestMethod": "Linear Regression", "optimalPercentile": 100.0, "par": 30.0, "currentHolding": 10.0, "safetyStockLevel": 0.0, "lowestRemainingStock": 0.0, "optimalReplenishmentDays": 18.0, "optimalReplenishmentPercentage": 0.0, "numberOfTopUps": 5.0, "thresholdGap": 10.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421718020.jpg"}, {"productId": "3421716072", "itemDescription": "Paediatric C-Collar", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 20.0, "safetyStockLevel": 9.0, "lowestRemainingStock": 9.0, "optimalReplenishmentDays": 6.0, "optimalReplenishmentPercentage": 90.0, "numberOfTopUps": 12.0, "thresholdGap": 11.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421716072.jpg"}, {"productId": "3421720063", "itemDescription": "Limpet Bag", "site": "Punggol", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 30.0, "currentHolding": 19.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 15.0, "optimalReplenishmentPercentage": 26.67, "numberOfTopUps": 6.0, "thresholdGap": 11.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421720063.jpg"}, {"productId": "3422718021", "itemDescription": "Adult Nebuliser Mask", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 30.0, "currentHolding": 16.0, "safetyStockLevel": 5.0, "lowestRemainingStock": 5.0, "optimalReplenishmentDays": 18.0, "optimalReplenishmentPercentage": 16.67, "numberOfTopUps": 5.0, "thresholdGap": 11.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422718021.jpg"}, {"productId": "3422723031", "itemDescription": "Adult BVM", "site": "Punggol", "bestMethod": "ARIMA", "optimalPercentile": 100.0, "par": 30.0, "currentHolding": 26.0, "safetyStockLevel": 15.0, "lowestRemainingStock": 15.0, "optimalReplenishmentDays": 18.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 5.0, "thresholdGap": 11.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422723031.jpg"}, {"productId": "3423117081MOSA", "itemDescription": "Self-Adhering Wrap", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 11.0, "safetyStockLevel": 0.0, "lowestRemainingStock": 0.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 0.0, "numberOfTopUps": 38.0, "thresholdGap": 11.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423117081MOSA.jpg"}, {"productId": "YNZB-3421421111", "itemDescription": "Instant Cold Pack", "site": "Punggol", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 40.0, "currentHolding": 25.0, "safetyStockLevel": 14.0, "lowestRemainingStock": 14.0, "optimalReplenishmentDays": 12.0, "optimalReplenishmentPercentage": 35.0, "numberOfTopUps": 7.0, "thresholdGap": 11.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3421421111.jpg"}, {"productId": "YNZB-3513917032MOS", "itemDescription": "Ventolin Solution 5mg", "site": "Sengkang", "bestMethod": "ARIMA", "optimalPercentile": 100.0, "par": 30.0, "currentHolding": 15.0, "safetyStockLevel": 4.0, "lowestRemainingStock": 4.0, "optimalReplenishmentDays": 21.0, "optimalReplenishmentPercentage": 13.33, "numberOfTopUps": 4.0, "thresholdGap": 11.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3513917032MOS.jpg"}, {"productId": "3421425232Z", "itemDescription": "Sterile Needle Size 23G", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 18.0, "safetyStockLevel": 6.0, "lowestRemainingStock": 6.0, "optimalReplenishmentDays": 6.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 80.0, "thresholdGap": 12.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421425232Z.jpg"}, {"productId": "3422616021", "itemDescription": "Body Cover 2.4m x 1.4m", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 15.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 63.0, "thresholdGap": 12.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422616021.jpg"}, {"productId": "3421721068MOS", "itemDescription": "Adult Defib Zoll CPR Stat Padz", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 30.0, "currentHolding": 13.0, "safetyStockLevel": 0.0, "lowestRemainingStock": 0.0, "optimalReplenishmentDays": 20.0, "optimalReplenishmentPercentage": 0.0, "numberOfTopUps": 4.0, "thresholdGap": 13.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421721068MOS.jpg"}, {"productId": "3423115064A", "itemDescription": "Crepe Bandage 15cm", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 21.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 5.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 14.0, "thresholdGap": 13.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115064A.jpg"}, {"productId": "3423115111B", "itemDescription": "Melolin", "site": "Sengkang", "bestMethod": "ARIMA", "optimalPercentile": 100.0, "par": 30.0, "currentHolding": 24.0, "safetyStockLevel": 11.0, "lowestRemainingStock": 11.0, "optimalReplenishmentDays": 23.0, "optimalReplenishmentPercentage": 36.67, "numberOfTopUps": 3.0, "thresholdGap": 13.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115111B.jpg"}, {"productId": "3423115271C", "itemDescription": "Transparent Dressing", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 21.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 13.0, "optimalReplenishmentPercentage": 40.0, "numberOfTopUps": 6.0, "thresholdGap": 13.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115271C.jpg"}, {"productId": "3423117032Z", "itemDescription": "Surgical Tape Size 1/2\"", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 23.0, "safetyStockLevel": 10.0, "lowestRemainingStock": 10.0, "optimalReplenishmentDays": 13.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 5.0, "thresholdGap": 13.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423117032Z.jpg"}, {"productId": "3471290101MOS", "itemDescription": "Biohazard Bag", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 18.0, "safetyStockLevel": 4.0, "lowestRemainingStock": 4.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 37.0, "thresholdGap": 14.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3471290101MOS.jpg"}, {"productId": "3511916071MOS", "itemDescription": "IV Dextrose 10%, 500mls", "site": "Sengkang", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 40.0, "currentHolding": 32.0, "safetyStockLevel": 18.0, "lowestRemainingStock": 18.0, "optimalReplenishmentDays": 27.0, "optimalReplenishmentPercentage": 45.0, "numberOfTopUps": 3.0, "thresholdGap": 14.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3511916071MOS.jpg"}, {"productId": "3421718011Z", "itemDescription": "OPA Size 40mm(Pink)", "site": "Punggol", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 20.0, "safetyStockLevel": 5.0, "lowestRemainingStock": 5.0, "optimalReplenishmentDays": 5.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 89.0, "thresholdGap": 15.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421718011Z.jpg"}, {"productId": "3421722012A", "itemDescription": "Venous Tourniquet", "site": "Sengkang", "bestMethod": "ARIMA", "optimalPercentile": 100.0, "par": 30.0, "currentHolding": 22.0, "safetyStockLevel": 7.0, "lowestRemainingStock": 7.0, "optimalReplenishmentDays": 21.0, "optimalReplenishmentPercentage": 23.33, "numberOfTopUps": 4.0, "thresholdGap": 15.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421722012A.jpg"}, {"productId": "3423115061A", "itemDescription": "Crepe Bandage 5cm", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 30.0, "currentHolding": 24.0, "safetyStockLevel": 9.0, "lowestRemainingStock": 9.0, "optimalReplenishmentDays": 13.0, "optimalReplenishmentPercentage": 30.0, "numberOfTopUps": 7.0, "thresholdGap": 15.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115061A.jpg"}, {"productId": "3423117033Z", "itemDescription": "Surgical Tape Size 1\"", "site": "Sengkang", "bestMethod": "ARIMA", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 22.0, "safetyStockLevel": 7.0, "lowestRemainingStock": 7.0, "optimalReplenishmentDays": 12.0, "optimalReplenishmentPercentage": 35.0, "numberOfTopUps": 7.0, "thresholdGap": 15.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423117033Z.jpg"}, {"productId": "3511318001MOS", "itemDescription": "HAEMOSTOP 500MG INJ", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 18.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 3.0, "optimalReplenishmentPercentage": 30.0, "numberOfTopUps": 140.0, "thresholdGap": 15.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3511318001MOS.jpg"}, {"productId": "3514728021Z", "itemDescription": "Chlorhexidine Gluconate Sachet 0.05% (25mls)", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 19.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 3.0, "optimalReplenishmentPercentage": 30.0, "numberOfTopUps": 154.0, "thresholdGap": 16.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3514728021Z.jpg"}, {"productId": "YNZB-3502090101MOSA", "itemDescription": "Drinking water bottle", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 70.0, "currentHolding": 34.0, "safetyStockLevel": 18.0, "lowestRemainingStock": 18.0, "optimalReplenishmentDays": 67.0, "optimalReplenishmentPercentage": 25.71, "numberOfTopUps": 1.0, "thresholdGap": 16.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3502090101MOSA.jpg"}, {"productId": "YNZB-3511236011", "itemDescription": "Amiodarone, 150mg/3ml", "site": "Sengkang", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 30.0, "currentHolding": 20.0, "safetyStockLevel": 4.0, "lowestRemainingStock": 4.0, "optimalReplenishmentDays": 9.0, "optimalReplenishmentPercentage": 13.33, "numberOfTopUps": 6.0, "thresholdGap": 16.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3511236011.jpg"}, {"productId": "3411162152", "itemDescription": "Blood Glucometer Test Strips", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 30.0, "currentHolding": 32.0, "safetyStockLevel": 15.0, "lowestRemainingStock": 15.0, "optimalReplenishmentDays": 18.0, "optimalReplenishmentPercentage": 50.0, "numberOfTopUps": 5.0, "thresholdGap": 17.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3411162152.jpg"}, {"productId": "YNZB-3501990139", "itemDescription": "Honey 20G", "site": "Punggol", "bestMethod": "Linear Regression", "optimalPercentile": 100.0, "par": 40.0, "currentHolding": 47.0, "safetyStockLevel": 30.0, "lowestRemainingStock": 30.0, "optimalReplenishmentDays": 27.0, "optimalReplenishmentPercentage": 75.0, "numberOfTopUps": 2.0, "thresholdGap": 17.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3501990139.jpg"}, {"productId": "YNZB-3421415032", "itemDescription": "Antiseptic Wipes (Packet)", "site": "Punggol", "bestMethod": "ARIMA", "optimalPercentile": 100.0, "par": 40.0, "currentHolding": 25.0, "safetyStockLevel": 7.0, "lowestRemainingStock": 7.0, "optimalReplenishmentDays": 15.0, "optimalReplenishmentPercentage": 17.5, "numberOfTopUps": 6.0, "thresholdGap": 18.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3421415032.jpg"}, {"productId": "YNZB-3423115063A", "itemDescription": "Crepe Bandage 10cm", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 50.0, "currentHolding": 34.0, "safetyStockLevel": 16.0, "lowestRemainingStock": 16.0, "optimalReplenishmentDays": 32.0, "optimalReplenishmentPercentage": 32.0, "numberOfTopUps": 2.0, "thresholdGap": 18.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3423115063A.jpg"}, {"productId": "3422415021", "itemDescription": "SAM Splint", "site": "Sengkang", "bestMethod": "ARIMA", "optimalPercentile": 100.0, "par": 40.0, "currentHolding": 32.0, "safetyStockLevel": 13.0, "lowestRemainingStock": 13.0, "optimalReplenishmentDays": 21.0, "optimalReplenishmentPercentage": 32.5, "numberOfTopUps": 4.0, "thresholdGap": 19.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422415021.jpg"}, {"productId": "3511916025MOS", "itemDescription": "IV Normal Saline 0.9%, 100mls", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 25.0, "safetyStockLevel": 6.0, "lowestRemainingStock": 6.0, "optimalReplenishmentDays": 17.0, "optimalReplenishmentPercentage": 30.0, "numberOfTopUps": 4.0, "thresholdGap": 19.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3511916025MOS.jpg"}, {"productId": "3512724071", "itemDescription": "Penthrox Inhalant 3mls", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 40.0, "currentHolding": 30.0, "safetyStockLevel": 11.0, "lowestRemainingStock": 11.0, "optimalReplenishmentDays": 25.0, "optimalReplenishmentPercentage": 27.5, "numberOfTopUps": 3.0, "thresholdGap": 19.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3512724071.jpg"}, {"productId": "3421316091", "itemDescription": "High Boot Cover", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 26.0, "safetyStockLevel": 6.0, "lowestRemainingStock": 6.0, "optimalReplenishmentDays": 0.0, "optimalReplenishmentPercentage": 60.0, "numberOfTopUps": 7.0, "thresholdGap": 20.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421316091.jpg"}, {"productId": "3421426021MOS", "itemDescription": "Bulb Syringe", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 27.0, "safetyStockLevel": 7.0, "lowestRemainingStock": 7.0, "optimalReplenishmentDays": 5.0, "optimalReplenishmentPercentage": 70.0, "numberOfTopUps": 9.0, "thresholdGap": 20.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421426021MOS.jpg"}, {"productId": "YNZB-3421718015", "itemDescription": "OPA Size 90mm (Yellow)", "site": "Sengkang", "bestMethod": "ARIMA", "optimalPercentile": 100.0, "par": 50.0, "currentHolding": 36.0, "safetyStockLevel": 16.0, "lowestRemainingStock": 16.0, "optimalReplenishmentDays": 35.0, "optimalReplenishmentPercentage": 32.0, "numberOfTopUps": 2.0, "thresholdGap": 20.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3421718015.jpg"}, {"productId": "YNZB-3423115062A", "itemDescription": "Crepe Bandage 7.5cm", "site": "Punggol", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 50.0, "currentHolding": 31.0, "safetyStockLevel": 11.0, "lowestRemainingStock": 11.0, "optimalReplenishmentDays": 19.0, "optimalReplenishmentPercentage": 22.0, "numberOfTopUps": 4.0, "thresholdGap": 20.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3423115062A.jpg"}, {"productId": "3513716012", "itemDescription": "IM Tramadol 50mg", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 32.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 12.0, "optimalReplenishmentPercentage": 40.0, "numberOfTopUps": 40.0, "thresholdGap": 24.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3513716012.jpg"}, {"productId": "3411162152", "itemDescription": "Blood Glucometer Test Strips", "site": "Sengkang", "bestMethod": "ARIMA", "optimalPercentile": 100.0, "par": 50.0, "currentHolding": 34.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 29.0, "optimalReplenishmentPercentage": 16.0, "numberOfTopUps": 3.0, "thresholdGap": 26.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3411162152.jpg"}, {"productId": "YNZB-3423115118A", "itemDescription": "Sterile Gauze", "site": "Punggol", "bestMethod": "ARIMA", "optimalPercentile": 100.0, "par": 50.0, "currentHolding": 39.0, "safetyStockLevel": 11.0, "lowestRemainingStock": 11.0, "optimalReplenishmentDays": 26.0, "optimalReplenishmentPercentage": 22.0, "numberOfTopUps": 1.0, "thresholdGap": 28.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3423115118A.jpg"}, {"productId": "YNZB-3501990139", "itemDescription": "Honey 20G", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 100.0, "currentHolding": 69.0, "safetyStockLevel": 41.0, "lowestRemainingStock": 41.0, "optimalReplenishmentDays": 62.0, "optimalReplenishmentPercentage": 41.0, "numberOfTopUps": 1.0, "thresholdGap": 28.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3501990139.jpg"}, {"productId": "YNZB-3421716071", "itemDescription": "Adult C-Collar (Adjustable)", "site": "Sengkang", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 50.0, "currentHolding": 33.0, "safetyStockLevel": 4.0, "lowestRemainingStock": 4.0, "optimalReplenishmentDays": 28.0, "optimalReplenishmentPercentage": 8.0, "numberOfTopUps": 3.0, "thresholdGap": 29.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3421716071.jpg"}, {"productId": "YNZB-3422616021MOS", "itemDescription": "Body Cover 2.4m x 1.4m", "site": "Sengkang", "bestMethod": "Linear Regression", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 34.0, "safetyStockLevel": 2.0, "lowestRemainingStock": 2.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 20.0, "numberOfTopUps": 44.0, "thresholdGap": 32.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3422616021MOS.jpg"}, {"productId": "3512724071", "itemDescription": "Penthrox Inhalant 3mls", "site": "Sengkang", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 50.0, "currentHolding": 33.0, "safetyStockLevel": 0.0, "lowestRemainingStock": 0.0, "optimalReplenishmentDays": 27.0, "optimalReplenishmentPercentage": 0.0, "numberOfTopUps": 3.0, "thresholdGap": 33.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3512724071.jpg"}, {"productId": "YNZB-3421391105MOS", "itemDescription": "Nitrile Glove, Non Sterile Size S", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 74.0, "currentHolding": 58.0, "safetyStockLevel": 23.0, "lowestRemainingStock": 23.0, "optimalReplenishmentDays": 55.0, "optimalReplenishmentPercentage": 31.08, "numberOfTopUps": 1.0, "thresholdGap": 35.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3421391105MOS.jpg"}, {"productId": "3421815031", "itemDescription": "LMA Lubricant Gel - 5g", "site": "Punggol", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 5.0, "currentHolding": 37.0, "safetyStockLevel": 0.0, "lowestRemainingStock": 0.0, "optimalReplenishmentDays": 1.0, "optimalReplenishmentPercentage": 0.0, "numberOfTopUps": 439.0, "thresholdGap": 37.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421815031.jpg"}, {"productId": "YNZB-3422719081", "itemDescription": "Adult LMA Tube Holder", "site": "Sengkang", "bestMethod": "Linear Regression", "optimalPercentile": 100.0, "par": 50.0, "currentHolding": 41.0, "safetyStockLevel": 3.0, "lowestRemainingStock": 3.0, "optimalReplenishmentDays": 25.0, "optimalReplenishmentPercentage": 6.0, "numberOfTopUps": 3.0, "thresholdGap": 38.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3422719081.jpg"}, {"productId": "3514015182MOS", "itemDescription": "Rectal Diazepam 5mg/2.5mls tube", "site": "Sengkang", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 100.0, "currentHolding": 75.0, "safetyStockLevel": 34.0, "lowestRemainingStock": 34.0, "optimalReplenishmentDays": 28.0, "optimalReplenishmentPercentage": 34.0, "numberOfTopUps": 11.0, "thresholdGap": 41.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3514015182MOS.jpg"}, {"productId": "3423115112Z", "itemDescription": "Medium Sterile Pad", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 80.0, "currentHolding": 65.0, "safetyStockLevel": 19.0, "lowestRemainingStock": 19.0, "optimalReplenishmentDays": 30.0, "optimalReplenishmentPercentage": 23.75, "numberOfTopUps": 16.0, "thresholdGap": 46.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3423115112Z.jpg"}, {"productId": "3422723031", "itemDescription": "Adult BVM", "site": "Sengkang", "bestMethod": "Moving Average", "optimalPercentile": 100.0, "par": 83.0, "currentHolding": 53.0, "safetyStockLevel": 5.0, "lowestRemainingStock": 5.0, "optimalReplenishmentDays": 39.0, "optimalReplenishmentPercentage": 6.02, "numberOfTopUps": 2.0, "thresholdGap": 48.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422723031.jpg"}, {"productId": "3241191107MOS", "itemDescription": "Polythene Bag (305mm X 457mm)", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 10.0, "currentHolding": 57.0, "safetyStockLevel": 7.0, "lowestRemainingStock": 7.0, "optimalReplenishmentDays": 7.0, "optimalReplenishmentPercentage": 70.0, "numberOfTopUps": 12.0, "thresholdGap": 50.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3241191107MOS.jpg"}, {"productId": "YNZB-3423115052", "itemDescription": "Triangular Bandage", "site": "Punggol", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 100.0, "currentHolding": 88.0, "safetyStockLevel": 34.0, "lowestRemainingStock": 34.0, "optimalReplenishmentDays": 24.0, "optimalReplenishmentPercentage": 34.0, "numberOfTopUps": 3.0, "thresholdGap": 54.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3423115052.jpg"}, {"productId": "YNZB-3411041123", "itemDescription": "Lancet", "site": "Punggol", "bestMethod": "Linear Regression", "optimalPercentile": 100.0, "par": 120.0, "currentHolding": 90.0, "safetyStockLevel": 19.0, "lowestRemainingStock": 19.0, "optimalReplenishmentDays": 61.0, "optimalReplenishmentPercentage": 15.83, "numberOfTopUps": 1.0, "thresholdGap": 71.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/YNZB-3411041123.jpg"}, {"productId": "3422954481", "itemDescription": "Face Shield", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 21.0, "currentHolding": 89.0, "safetyStockLevel": 15.0, "lowestRemainingStock": 15.0, "optimalReplenishmentDays": 2.0, "optimalReplenishmentPercentage": 71.43, "numberOfTopUps": 232.0, "thresholdGap": 74.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3422954481.jpg"}, {"productId": "3421822051MOS", "itemDescription": "Thermometer Ear Probe Cover", "site": "Punggol", "bestMethod": "ARIMA", "optimalPercentile": 100.0, "par": 50.0, "currentHolding": 98.0, "safetyStockLevel": 8.0, "lowestRemainingStock": 8.0, "optimalReplenishmentDays": 26.0, "optimalReplenishmentPercentage": 16.0, "numberOfTopUps": 18.0, "thresholdGap": 90.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421822051MOS.jpg"}, {"productId": "3421416031MOS", "itemDescription": "Disposable Kidney Dish", "site": "Punggol", "bestMethod": "Average", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 107.0, "safetyStockLevel": 16.0, "lowestRemainingStock": 16.0, "optimalReplenishmentDays": 13.0, "optimalReplenishmentPercentage": 80.0, "numberOfTopUps": 6.0, "thresholdGap": 91.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3421416031MOS.jpg"}, {"productId": "3511318001MOS", "itemDescription": "HAEMOSTOP 500MG INJ", "site": "Sengkang", "bestMethod": "LSTM", "optimalPercentile": 100.0, "par": 20.0, "currentHolding": 127.0, "safetyStockLevel": 14.0, "lowestRemainingStock": 14.0, "optimalReplenishmentDays": 11.0, "optimalReplenishmentPercentage": 70.0, "numberOfTopUps": 27.0, "thresholdGap": 113.0, "status": "Healthy", "photo": "https://cloudpick-singapore.oss-ap-southeast-1.aliyuncs.com/3511318001MOS.jpg"}];
+    const riskOrder = {
+      "Below threshold": 0,
+      "Watch": 1,
+      "No inventory": 2,
+      "Healthy": 3
+    };
+
+    const state = {
+      rows: DATA,
+      filtered: DATA,
+      selectedKey: "",
+    };
+
+    const els = {
+      search: document.getElementById("searchInput"),
+      site: document.getElementById("siteFilter"),
+      status: document.getElementById("statusFilter"),
+      sort: document.getElementById("sortSelect"),
+      body: document.getElementById("tableBody"),
+      empty: document.getElementById("emptyState"),
+      count: document.getElementById("resultCount"),
+      detail: document.getElementById("detailPanel"),
+      total: document.getElementById("totalMetric"),
+      below: document.getElementById("belowMetric"),
+      watch: document.getElementById("watchMetric"),
+      healthy: document.getElementById("healthyMetric"),
+      buffer: document.getElementById("bufferMetric"),
+      download: document.getElementById("downloadBtn"),
+    };
+
+    function rowKey(row) {
+      return `${row.productId}|${row.site}`;
+    }
+
+    function fmt(value, digits = 0) {
+      if (value === null || value === undefined || Number.isNaN(value)) return "-";
+      return Number(value).toLocaleString(undefined, {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits,
+      });
+    }
+
+    function cssStatus(status) {
+      return "status-" + status.toLowerCase().replaceAll(" ", "-");
+    }
+
+    function fillSelect(select, values) {
+      values.forEach((value) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = value;
+        select.appendChild(option);
+      });
+    }
+
+    function setupFilters() {
+      fillSelect(els.site, [...new Set(DATA.map((row) => row.site))].sort());
+      fillSelect(els.status, [...new Set(DATA.map((row) => row.status))].sort((a, b) => riskOrder[a] - riskOrder[b]));
+
+      [els.search, els.site, els.status, els.sort].forEach((el) => {
+        el.addEventListener("input", applyFilters);
+        el.addEventListener("change", applyFilters);
+      });
+      els.download.addEventListener("click", downloadCsv);
+    }
+
+    function applyFilters() {
+      const term = els.search.value.trim().toLowerCase();
+      const site = els.site.value;
+      const status = els.status.value;
+
+      let rows = DATA.filter((row) => {
+        const searchable = `${row.productId} ${row.itemDescription}`.toLowerCase();
+        return (!term || searchable.includes(term))
+          && (site === "All" || row.site === site)
+          && (status === "All" || row.status === status);
+      });
+
+      rows = sortRows(rows, els.sort.value);
+      state.filtered = rows;
+
+      if (!rows.some((row) => rowKey(row) === state.selectedKey)) {
+        state.selectedKey = rows[0] ? rowKey(rows[0]) : "";
+      }
+
+      render();
+    }
+
+    function sortRows(rows, mode) {
+      const sorted = [...rows];
+      sorted.sort((a, b) => {
+        if (mode === "gap") {
+          return nullableGap(a) - nullableGap(b);
+        }
+        if (mode === "product") {
+          return a.productId.localeCompare(b.productId) || a.site.localeCompare(b.site);
+        }
+        if (mode === "site") {
+          return a.site.localeCompare(b.site) || a.productId.localeCompare(b.productId);
+        }
+        return (riskOrder[a.status] - riskOrder[b.status])
+          || (nullableGap(a) - nullableGap(b))
+          || a.productId.localeCompare(b.productId);
+      });
+      return sorted;
+    }
+
+    function nullableGap(row) {
+      return row.thresholdGap === null || row.thresholdGap === undefined ? 999999 : row.thresholdGap;
+    }
+
+    function render() {
+      renderMetrics();
+      renderTable();
+      renderDetail();
+    }
+
+    function renderMetrics() {
+      const rows = state.filtered;
+      const gaps = rows
+        .map((row) => row.thresholdGap)
+        .filter((gap) => gap !== null && gap !== undefined)
+        .sort((a, b) => a - b);
+      const medianGap = gaps.length ? gaps[Math.floor(gaps.length / 2)] : 0;
+
+      els.total.textContent = fmt(rows.length);
+      els.below.textContent = fmt(rows.filter((row) => row.status === "Below threshold").length);
+      els.watch.textContent = fmt(rows.filter((row) => row.status === "Watch").length);
+      els.healthy.textContent = fmt(rows.filter((row) => row.status === "Healthy").length);
+      els.buffer.textContent = fmt(medianGap);
+      els.count.textContent = `${fmt(rows.length)} rows`;
+    }
+
+    function renderTable() {
+      els.body.innerHTML = "";
+      els.empty.hidden = state.filtered.length > 0;
+
+      const fragment = document.createDocumentFragment();
+      state.filtered.forEach((row) => {
+        const tr = document.createElement("tr");
+        const key = rowKey(row);
+        if (key === state.selectedKey) tr.classList.add("active");
+        tr.innerHTML = `
+          <td><span class="pill ${cssStatus(row.status)}">${row.status}</span></td>
+          <td><strong>${escapeHtml(row.productId)}</strong></td>
+          <td class="item-cell">${escapeHtml(row.itemDescription)}</td>
+          <td>${escapeHtml(row.site)}</td>
+          <td>${fmt(row.currentHolding)}</td>
+          <td>${fmt(row.safetyStockLevel)}</td>
+          <td>${fmt(row.thresholdGap)}</td>
+          <td>${fmt(row.par)}</td>
+          <td>${fmt(row.optimalReplenishmentDays, 1)}</td>
+          <td>${fmt(row.numberOfTopUps)}</td>
+        `;
+        tr.addEventListener("click", () => {
+          state.selectedKey = key;
+          render();
+        });
+        fragment.appendChild(tr);
+      });
+      els.body.appendChild(fragment);
+    }
+
+    function renderDetail() {
+      const row = state.filtered.find((item) => rowKey(item) === state.selectedKey) || state.filtered[0];
+      if (!row) {
+        els.detail.innerHTML = "<h2>No threshold selected</h2><p class='muted'>Adjust filters to show product-site records.</p>";
+        return;
+      }
+
+      const maxValue = Math.max(row.par || 0, row.currentHolding || 0, row.safetyStockLevel || 0, 1);
+      const currentClass = row.status === "Below threshold" ? "bad" : row.status === "Watch" ? "watch" : "good";
+      const image = row.photo
+        ? `<img class="detail-photo" src="${escapeAttribute(row.photo)}" alt="">`
+        : "";
+
+      els.detail.innerHTML = `
+        ${image}
+        <span class="pill ${cssStatus(row.status)}">${row.status}</span>
+        <h2>${escapeHtml(row.productId)} - ${escapeHtml(row.site)}</h2>
+        <div class="muted">${escapeHtml(row.itemDescription || "No item description available.")}</div>
+        <div class="stock-bars">
+          ${bar("Current Holding", row.currentHolding, maxValue, `current ${currentClass}`)}
+          ${bar("Safety Threshold", row.safetyStockLevel, maxValue, "threshold")}
+          ${bar("PAR", row.par, maxValue, "")}
+        </div>
+        <div class="facts">
+          <div class="fact"><span>Threshold Gap</span><strong>${fmt(row.thresholdGap)}</strong></div>
+          <div class="fact"><span>Safety Stock % of PAR</span><strong>${fmt(row.optimalReplenishmentPercentage, 1)}%</strong></div>
+          <div class="fact"><span>Optimal Replenishment Days</span><strong>${fmt(row.optimalReplenishmentDays, 1)}</strong></div>
+          <div class="fact"><span>Best Forecast Method</span><strong>${escapeHtml(row.bestMethod || "-")}</strong></div>
+          <div class="fact"><span>Lowest Remaining Stock</span><strong>${fmt(row.lowestRemainingStock)}</strong></div>
+          <div class="fact"><span>Top Ups in Simulation</span><strong>${fmt(row.numberOfTopUps)}</strong></div>
+        </div>
+      `;
+    }
+
+    function bar(label, value, maxValue, className) {
+      const pct = Math.max(0, Math.min(100, ((value || 0) / maxValue) * 100));
+      return `
+        <div class="bar-row">
+          <span>${label}</span>
+          <div class="bar-track"><div class="bar-fill ${className}" style="width: ${pct}%"></div></div>
+          <strong>${fmt(value)}</strong>
+        </div>
+      `;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;",
+      }[char]));
+    }
+
+    function escapeAttribute(value) {
+      return escapeHtml(value).replace(/`/g, "&#096;");
+    }
+
+    function downloadCsv() {
+      const headers = [
+        "Product ID", "Item Description", "Site Location", "Status",
+        "Current Holding", "Safety Stock Level", "Threshold Gap", "PAR",
+        "Optimal Replenishment Days", "Number of Top Ups"
+      ];
+      const lines = [
+        headers.join(","),
+        ...state.filtered.map((row) => [
+          row.productId,
+          row.itemDescription,
+          row.site,
+          row.status,
+          row.currentHolding,
+          row.safetyStockLevel,
+          row.thresholdGap,
+          row.par,
+          row.optimalReplenishmentDays,
+          row.numberOfTopUps,
+        ].map(csvCell).join(","))
+      ];
+      const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "filtered_safety_stock_monitoring.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function csvCell(value) {
+      const text = String(value ?? "");
+      return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+    }
+
+    setupFilters();
+    applyFilters();
+  </script>
+</body>
+</html>
